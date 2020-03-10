@@ -16,16 +16,18 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.gson.GsonBuilder
 import kotlinx.android.synthetic.main.activity_main.*
+import okhttp3.*
+import java.io.IOException
+import kotlin.reflect.typeOf
 
 private const val PERMISSION_REQUEST = 10
 class MainActivity : AppCompatActivity() {
 
     lateinit var locationManager: LocationManager
     private var hasGps = false
-    private var hasNetwork = false
     private var locationGps: Location? = null
-    private var locationNetwork: Location? = null
 
     private var permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
 
@@ -36,28 +38,70 @@ class MainActivity : AppCompatActivity() {
         recyclerView_main.setBackgroundColor(Color.GRAY)
 
         recyclerView_main.layoutManager = LinearLayoutManager(this)
-        recyclerView_main.adapter = MainAdapter()
-        /*
-        disableView()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkPermission(permissions)) {
-                enableView()
-            } else {
-                requestPermissions(permissions, PERMISSION_REQUEST)
-            }
-        } else {
-            enableView()
-        }*/
+        //recyclerView_main.adapter = MainAdapter()
+        getLocation()
+
+
+        //IF STATEMENTS BASED ON USER PERONALIZATION... set finQuery
+        var finQuery:String
+        finQuery = "Sugar"
+
+        //IF STATEMENTS BASED ON USER PERONALIZATION... set finQuery
+
+
+
+        println("MY LSLSLSLLLSLSLLS" + finQuery)
+        fetchYelp(locationGps!!.latitude.toDouble(), locationGps!!.longitude.toDouble(), finQuery)
     }
 
-    /*
+    fun fetchYelp(lat : Double, long: Double, query : String){
+        println("Starting API Attempt")
+        val limit = "limit=3" //add this to the end of the final query
+        val url = "https://api.yelp.com/v3/businesses/search?"
+
+        //AT LONG and QUERY SET UP
+        val fLat = "latitude="+lat.toString()
+        val fLong = "longitude="+long.toString()
+        val fQuery = "term="+query
+
+        //COMBINE LAT LONG AND QUERY TO FINAL URL
+        val finalurl = url + fLat + "&"+ fLong + "&" + fQuery + "&" + limit
+
+        println(finalurl)
+        //AUTHORIZATION HEADER CREATION
+        val Api_Key = "XXXXXXXXXX"
+        val mix = "Bearer " + Api_Key
+
+
+        val request = Request.Builder().header("Authorization",mix).url(finalurl).build()
+        val client = OkHttpClient()
+        client.newCall(request).enqueue(object: Callback{
+            override fun onResponse(call: Call, response: Response) {
+                val body = response.body()?.string()
+                println(body)
+
+                //Create Json reader and read into the yelpfeed class
+                val gson = GsonBuilder().create()
+                val yelpFeed = gson.fromJson(body,YelpFeed::class.java)
+
+                //Create the UI from info from json
+                runOnUiThread {
+                    recyclerView_main.adapter = MainAdapter(yelpFeed)}
+            }
+
+            override fun onFailure(call: Call, e: IOException) {
+                println("Failed to execute request")
+            }
+        })
+
+    }
+
+
     @SuppressLint("MissingPermission")
     private fun getLocation() {
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         hasGps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        hasNetwork = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-        if (hasGps || hasNetwork) {
-
+        if (hasGps){
             if (hasGps) {
                 Log.d("CodeAndroidLocation", "hasGps")
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0F, object :
@@ -65,11 +109,6 @@ class MainActivity : AppCompatActivity() {
                     override fun onLocationChanged(location: Location?) {
                         if (location != null) {
                             locationGps = location
-                            tv_result.append("\nGPS ")
-                            tv_result.append("\nLatitude : " + locationGps!!.latitude)
-                            tv_result.append("\nLongitude : " + locationGps!!.longitude)
-                            Log.d("CodeAndroidLocation", " GPS Latitude : " + locationGps!!.latitude)
-                            Log.d("CodeAndroidLocation", " GPS Longitude : " + locationGps!!.longitude)
                         }
                     }
 
@@ -88,56 +127,8 @@ class MainActivity : AppCompatActivity() {
                 })
 
                 val localGpsLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                if (localGpsLocation != null)
+                if (localGpsLocation != null) {
                     locationGps = localGpsLocation
-            }
-            if (hasNetwork) {
-                Log.d("CodeAndroidLocation", "hasGps")
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0F, object :
-                    LocationListener {
-                    override fun onLocationChanged(location: Location?) {
-                        if (location != null) {
-                            locationNetwork = location
-                            tv_result.append("\nNetwork ")
-                            tv_result.append("\nLatitude : " + locationNetwork!!.latitude)
-                            tv_result.append("\nLongitude : " + locationNetwork!!.longitude)
-                            Log.d("CodeAndroidLocation", " Network Latitude : " + locationNetwork!!.latitude)
-                            Log.d("CodeAndroidLocation", " Network Longitude : " + locationNetwork!!.longitude)
-                        }
-                    }
-
-                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-
-                    }
-
-                    override fun onProviderEnabled(provider: String?) {
-
-                    }
-
-                    override fun onProviderDisabled(provider: String?) {
-
-                    }
-
-                })
-
-                val localNetworkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                if (localNetworkLocation != null)
-                    locationNetwork = localNetworkLocation
-            }
-
-            if(locationGps!= null && locationNetwork!= null){
-                if(locationGps!!.accuracy > locationNetwork!!.accuracy){
-                    tv_result.append("\nNetwork ")
-                    tv_result.append("\nLatitude : " + locationNetwork!!.latitude)
-                    tv_result.append("\nLongitude : " + locationNetwork!!.longitude)
-                    Log.d("CodeAndroidLocation", " Network Latitude : " + locationNetwork!!.latitude)
-                    Log.d("CodeAndroidLocation", " Network Longitude : " + locationNetwork!!.longitude)
-                }else{
-                    tv_result.append("\nGPS ")
-                    tv_result.append("\nLatitude : " + locationGps!!.latitude)
-                    tv_result.append("\nLongitude : " + locationGps!!.longitude)
-                    Log.d("CodeAndroidLocation", " GPS Latitude : " + locationGps!!.latitude)
-                    Log.d("CodeAndroidLocation", " GPS Longitude : " + locationGps!!.longitude)
                 }
             }
 
@@ -145,49 +136,9 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
         }
     }
-
-
-
-    private fun disableView() {
-        btn_get_location.isEnabled = false
-        btn_get_location.alpha = 0.5F
-    }
-
-    private fun enableView() {
-        btn_get_location.isEnabled = true
-        btn_get_location.alpha = 1F
-        btn_get_location.setOnClickListener { getLocation()}
-        Toast.makeText(this, "Done", Toast.LENGTH_SHORT).show()
-    }
-
-
-    private fun checkPermission(permissionArray: Array<String>): Boolean {
-        var allSuccess = true
-        for (i in permissionArray.indices) {
-            if (checkCallingOrSelfPermission(permissionArray[i]) == PackageManager.PERMISSION_DENIED)
-                allSuccess = false
-        }
-        return allSuccess
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST) {
-            var allSuccess = true
-            for (i in permissions.indices) {
-                if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
-                    allSuccess = false
-                    val requestAgain = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && shouldShowRequestPermissionRationale(permissions[i])
-                    if (requestAgain) {
-                        Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this, "Go to settings and enable the permission", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-            if (allSuccess)
-                enableView()
-
-        }
-    }*/
 }
+
+
+class YelpFeed(val businesses: List<Business>)
+
+class Business(val id: String, val name: String, val image_url: String)
