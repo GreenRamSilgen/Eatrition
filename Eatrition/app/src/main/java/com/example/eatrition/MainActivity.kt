@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
 
         println(finalurl)
         //AUTHORIZATION HEADER CREATION
-        val Api_Key = "XXXXXXXXXX"
+        val Api_Key = "XXXXX"
         val mix = "Bearer " + Api_Key
 
 

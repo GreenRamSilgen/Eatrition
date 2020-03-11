@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.rec_row.view.*
 
 class MainAdapter(val yelpFeed: YelpFeed): RecyclerView.Adapter<CustomViewHolder>() {
@@ -24,6 +25,9 @@ class MainAdapter(val yelpFeed: YelpFeed): RecyclerView.Adapter<CustomViewHolder
         //val restaurantName = restaurantNames.get(position) //extract restaurant name at position x
         val restaurant = yelpFeed.businesses.get(position)
         holder.view.textView_restaurantName.text = restaurant.name //set name of each card here.
+
+        val restaurantImg = holder.view.imageView
+        Picasso.with(holder.view.context).load(restaurant.image_url).into(restaurantImg)
     }
 }
 
